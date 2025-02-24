@@ -4,14 +4,12 @@ class Bender {
     private char[][] mapaVisual;
     private RobotBender robot;
 
-    // Constructor: inicializa el mapa y el robot
     public Bender(String mapa) {
         this.mapaVisual = convertirMapa(mapa);
         int[] posRobot = encontrarRobot();
         this.robot = new RobotBender(posRobot[0], posRobot[1], mapaVisual);
     }
 
-    // Convierte el mapa de String a una matriz de caracteres
     public char[][] convertirMapa(String mapa) {
         String[] filas = mapa.split("\n");
         int filasNum = filas.length;
@@ -27,80 +25,85 @@ class Bender {
         return mapaArray;
     }
 
-    // Encuentra la posición inicial del robot
     private int[] encontrarRobot() {
         for (int i = 0; i < mapaVisual.length; i++) {
             for (int j = 0; j < mapaVisual[i].length; j++) {
                 if (mapaVisual[i][j] == 'X') {
-                    return new int[]{i, j}; // Devolver la posición del robot
+                    return new int[]{i, j};
                 }
             }
         }
         throw new IllegalArgumentException("No se encontró el robot en el mapa");
     }
 
-    // Método que inicia el movimiento del robot y devuelve la secuencia de movimientos
     public String run() {
-        return bfs(); // Usamos BFS para obtener la secuencia más corta de movimientos
+        return movimientoRobot();
     }
 
-    private String bfs() {
-        // Direcciones de movimiento: N, S, E, W
-        char[] direcciones = {'N', 'S', 'E', 'W'};
+    private String movimientoRobot() {
+        char[] direcciones = {'S', 'E', 'N', 'W'};
         int[][] movimiento = {
-                {-1, 0}, // N
                 {1, 0},  // S
                 {0, 1},  // E
+                {-1, 0}, // N
                 {0, -1}  // W
         };
 
-        // Cola para BFS: contiene la posición y el camino hasta esa posición
-        Queue<Posicion> cola = new LinkedList<>();
-        Set<String> visitados = new HashSet<>();
+        int direccionActual = 0;
+        StringBuilder camino = new StringBuilder();
 
-        // Posición inicial del robot
-        cola.add(new Posicion(robot.getX(), robot.getY(), ""));
-        visitados.add(robot.getX() + "," + robot.getY());
+        while (true) {
+            int nuevoX = robot.getX() + movimiento[direccionActual][0];
+            int nuevoY = robot.getY() + movimiento[direccionActual][1];
 
-        while (!cola.isEmpty()) {
-            Posicion actual = cola.poll();
+            if (esPosicionValida(nuevoX, nuevoY)) {
+                robot.mover(nuevoX, nuevoY);
+                camino.append(direcciones[direccionActual]);  // Agrega la dirección al camino
 
-            // Si llega al destino, devuelve la secuencia de movimientos
-            if (mapaVisual[actual.x][actual.y] == '$') {
-                return actual.camino;
+                if (mapaVisual[nuevoX][nuevoY] == '$') {  // Si llegó a la meta, termina
+                    return camino.toString();
+                }
+            } else {
+                // Si choca con una pared, cambia a la siguiente dirección
+                direccionActual = (direccionActual + 1) % 4;
             }
+        }
+    }
 
-            // Probar todas las direcciones posibles
-            for (int i = 0; i < 4; i++) {
-                int nuevoX = actual.x + movimiento[i][0];
-                int nuevoY = actual.y + movimiento[i][1];
+    public String teleport() {
+        int[][] Tp = encontrarTeleport();
 
-                // Verificar si la nueva posición es válida
-                if (esPosicionValida(nuevoX, nuevoY) && !visitados.contains(nuevoX + "," + nuevoY)) {
-                    visitados.add(nuevoX + "," + nuevoY);
-                    cola.add(new Posicion(nuevoX, nuevoY, actual.camino + direcciones[i]));
+        return "";
+    }
+
+    private int[][] encontrarTeleport() {
+        int count = 0;
+        for (int i = 0; i < mapaVisual.length; i++) {
+            for (int j = 0; j < mapaVisual[i].length; j++) {
+                if (mapaVisual[i][j] == 'T') {
+                    count++;
                 }
             }
         }
 
-        return ""; // Si no se encuentra un camino
+        int[][] teleports = new int[count][2];
+        int index = 0;
+
+        for (int i = 0; i < mapaVisual.length; i++) {
+            for (int j = 0; j < mapaVisual[i].length; j++) {
+                if (mapaVisual[i][j] == 'T') {
+                    teleports[index][0] = i;
+                    teleports[index][1] = j;
+                    index++;
+                }
+            }
+        }
+
+        return teleports;
     }
 
-    // Verifica si la posición es válida
     private boolean esPosicionValida(int x, int y) {
         return x >= 0 && x < mapaVisual.length && y >= 0 && y < mapaVisual[0].length && mapaVisual[x][y] != '#';
-    }
-
-    // Clase interna para manejar la posición y el camino hasta esa posición
-    private class Posicion {
-        int x, y;
-        String camino;
-
-        Posicion(int x, int y, String camino) {
-            this.x = x;
-            this.y = y;
-            this.camino = camino;
-        }
     }
 }
 
@@ -122,8 +125,8 @@ class RobotBender {
         return y;
     }
 
-    // Obtiene la posición actual del robot
-    public int[] getPosicion() {
-        return new int[]{x, y};
+    public void mover(int nuevoX, int nuevoY) {
+        this.x = nuevoX;
+        this.y = nuevoY;
     }
 }
