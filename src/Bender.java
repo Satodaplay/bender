@@ -63,6 +63,10 @@ class Bender {
                 if (mapaVisual[nuevoX][nuevoY] == '$') {  // Si llegó a la meta, termina
                     return camino.toString();
                 }
+
+                if (mapaVisual[nuevoX][nuevoY] == 'T') {
+                    teleport();
+                }
             } else {
                 // Si choca con una pared, cambia a la siguiente dirección
                 direccionActual = (direccionActual + 1) % 4;
@@ -71,10 +75,34 @@ class Bender {
     }
 
     public String teleport() {
-        int[][] Tp = encontrarTeleport();
+        int[][] tps = encontrarTeleport();
+
+        // Si no hay puntos de teletransporte, devuelve vacío
+        if (tps.length == 0) {
+            return "";
+        }
+
+        // Encuentra el TP más cercano
+        int[] tpMasCercano = tps[0];
+        double distanciaMinima = calcularDistancia(robot.getX(), robot.getY(), tpMasCercano[0], tpMasCercano[1]);
+
+        for (int i = 1; i < tps.length; i++) {
+            double distancia = calcularDistancia(robot.getX(), robot.getY(), tps[i][0], tps[i][1]);
+            if (distancia < distanciaMinima) {
+                tpMasCercano = tps[i];
+                distanciaMinima = distancia;
+            }
+        }
+        // Teletransporta al TP más cercano
+        robot.mover(tpMasCercano[0], tpMasCercano[1]);
 
         return "";
     }
+
+    private double calcularDistancia(int x1, int y1, int x2, int y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    }
+
 
     private int[][] encontrarTeleport() {
         int count = 0;
