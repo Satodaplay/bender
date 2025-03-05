@@ -41,62 +41,84 @@ class Bender {
     }
 
     private String movimientoRobot() {
+        // Orden de prioridad de las direcciones: S, E, N, W
         char[] direcciones = {'S', 'E', 'N', 'W'};
         int[][] movimiento = {
-                {1, 0},  // S
-                {0, 1},  // E
+                {1, 0}, // S
+                {0, 1}, // E
                 {-1, 0}, // N
-                {0, -1}  // W
+                {0, -1} // W
         };
 
-        int direccionActual = 0;
+        // Variable para rastrear el último intento (inicialmente intenta ir al sur)
+        List<Integer> ordenDireccion = new LinkedList<>(Arrays.asList(0, 1, 2, 3)); // S, E, N, W
         StringBuilder camino = new StringBuilder();
 
         while (true) {
-            int nuevoX = robot.getX() + movimiento[direccionActual][0];
-            int nuevoY = robot.getY() + movimiento[direccionActual][1];
+            boolean moved = false;
+            for (int i: ordenDireccion) {
+                int nuevoX = robot.getX() + movimiento[i][0];
+                int nuevoY = robot.getY() + movimiento[i][1];
 
-            if (esPosicionValida(nuevoX, nuevoY)) {
-                robot.mover(nuevoX, nuevoY);
-                camino.append(direcciones[direccionActual]);  // Agrega la dirección al camino
+                if (esPosicionValida(nuevoX, nuevoY)) {
+                    robot.mover(nuevoX, nuevoY);
+                    camino.append(direcciones[i]);
+                    if (mapaVisual[nuevoX][nuevoY] == '$') {
+                        // Si llegó a la meta, termina
+                        return camino.toString();
+                    }
+                    if (mapaVisual[nuevoX][nuevoY] == 'T') {
+                        teleport();
+                    }
 
-                if (mapaVisual[nuevoX][nuevoY] == '$') {  // Si llegó a la meta, termina
-                    return camino.toString();
+                    // Ajustar orden después de un movimiento exitoso
+                    ordenDireccion.remove((Integer)i);
+                    ordenDireccion.add(0, i);
+
+                    moved = true;
+                    break;
                 }
+            }
 
-                if (mapaVisual[nuevoX][nuevoY] == 'T') {
-                    teleport();
-                }
-            } else {
-                // Si choca con una pared, cambia a la siguiente dirección
-                direccionActual = (direccionActual + 1) % 4;
+            if (!moved) {
+                // Si ninguna dirección es válida, termina el bucle
+                break;
             }
         }
+
+        return camino.toString();
     }
 
-    public String teleport() {
-        int[][] tps = encontrarTeleport();
+    public void teleport() {
+        int[][] teleports = encontrarTeleport();
 
-        // Si no hay puntos de teletransporte, devuelve vacío
-        if (tps.length == 0) {
-            return "";
+        // Si no hay puntos de teletransporte, muestra un mensaje y sale
+        if (teleports.length == 0) {
+            System.out.println("No hay puntos de teletransporte disponibles.");
+            return;
         }
 
         // Encuentra el TP más cercano
-        int[] tpMasCercano = tps[0];
-        double distanciaMinima = calcularDistancia(robot.getX(), robot.getY(), tpMasCercano[0], tpMasCercano[1]);
+        int[] tpMasCercano = null;
+        double distanciaMinima = Double.MAX_VALUE;
+        int currentX = robot.getX();
+        int currentY = robot.getY();
 
-        for (int i = 1; i < tps.length; i++) {
-            double distancia = calcularDistancia(robot.getX(), robot.getY(), tps[i][0], tps[i][1]);
-            if (distancia < distanciaMinima) {
-                tpMasCercano = tps[i];
+        for (int[] tp : teleports) {
+            double distancia = calcularDistancia(currentX, currentY, tp[0], tp[1]);
+            if (!Arrays.equals(tp, new int[]{currentX, currentY}) && distancia < distanciaMinima) {
+                tpMasCercano = tp;
                 distanciaMinima = distancia;
             }
         }
-        // Teletransporta al TP más cercano
-        robot.mover(tpMasCercano[0], tpMasCercano[1]);
 
-        return "";
+        // Si encontramos un teletransporte válido
+        if (tpMasCercano != null) {
+            robot.mover(tpMasCercano[0], tpMasCercano[1]);
+            System.out.println("Teletransportado a: (" + tpMasCercano[0] + ", " + tpMasCercano[1] + ")");
+        } else {
+            System.out.println("No se encontró un teletransporte diferente disponible para moverse.");
+        }
     }
 
     private double calcularDistancia(int x1, int y1, int x2, int y2) {
