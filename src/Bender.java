@@ -14,6 +14,13 @@ class Bender {
             {0, -1}
     };
 
+    /*       _____     ____
+            /      \  |  o |
+           |        |/ ___\|
+           |_________/
+           |_|_| |_|_|
+    */
+
     /*
      * Constructor de la classe Bender.
      * Inicialitza el mapa visual a partir d'una cadena de text i crea una instància del robot Bender.
