@@ -1,8 +1,20 @@
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 class Bender {
     private char[][] mapaVisual;
     private RobotBender robot;
+    private boolean inversorActivado = false;
+
+    // Inicialmente, asumir el orden S, E, N, W
+    private char[] direcciones = {'S', 'E', 'N', 'W'};
+    private int[][] movimiento = {
+            {1, 0},  // S
+            {0, 1},  // E
+            {-1, 0}, // N
+            {0, -1}  // W
+    };
 
     public Bender(String mapa) {
         this.mapaVisual = convertirMapa(mapa);
@@ -14,9 +26,7 @@ class Bender {
         String[] filas = mapa.split("\n");
         int filasNum = filas.length;
         int columnasNum = filas[0].length();
-
         char[][] mapaArray = new char[filasNum][columnasNum];
-
         for (int i = 0; i < filasNum; i++) {
             for (int j = 0; j < filas[i].length(); j++) {
                 mapaArray[i][j] = filas[i].charAt(j);
@@ -41,64 +51,86 @@ class Bender {
     }
 
     private String movimientoRobot() {
-        // Orden de prioridad de las direcciones: S, E, N, W
-        char[] direcciones = {'S', 'E', 'N', 'W'};
-        int[][] movimiento = {
-                {1, 0}, // S
-                {0, 1}, // E
-                {-1, 0}, // N
-                {0, -1} // W
-        };
-
-        // Variable para rastrear el último intento (inicialmente intenta ir al sur)
-        List<Integer> ordenDireccion = new LinkedList<>(Arrays.asList(0, 1, 2, 3)); // S, E, N, W
         StringBuilder camino = new StringBuilder();
+        Set<String> visitado = new HashSet<>(); // Para guardar las posiciones visitadas con dirección
 
         while (true) {
             boolean moved = false;
-            for (int i: ordenDireccion) {
+
+            // Chequear si el estado actual con la dirección inicial (orden prioridad) ya fue visitado
+            String estadoActual = robot.getX() + "," + robot.getY() + "," + direcciones[0];
+
+            if (visitado.contains(estadoActual)) {
+                return null;
+            }
+
+            visitado.add(estadoActual);
+
+            for (int i = 0; i < 4; i++) {
                 int nuevoX = robot.getX() + movimiento[i][0];
                 int nuevoY = robot.getY() + movimiento[i][1];
 
                 if (esPosicionValida(nuevoX, nuevoY)) {
                     robot.mover(nuevoX, nuevoY);
                     camino.append(direcciones[i]);
+
                     if (mapaVisual[nuevoX][nuevoY] == '$') {
-                        // Si llegó a la meta, termina
-                        return camino.toString();
+                        return camino.toString(); // Si llegó a la meta, termina
                     }
+
                     if (mapaVisual[nuevoX][nuevoY] == 'T') {
                         teleport();
                     }
 
-                    // Ajustar orden después de un movimiento exitoso
-                    ordenDireccion.remove((Integer)i);
-                    ordenDireccion.add(0, i);
+                    if (mapaVisual[nuevoX][nuevoY] == 'I') {
+                        inversorActivado = !inversorActivado;
+                        invertirDirecciones();
+                    }
 
+                    // Cambia el orden de las direcciones, poniendo esta dirección al frente
+                    moverDireccionAlFrente(i);
                     moved = true;
                     break;
                 }
             }
-
             if (!moved) {
-                // Si ninguna dirección es válida, termina el bucle
-                break;
+                break; // Si ninguna dirección es válida, termina el bucle
             }
         }
-
         return camino.toString();
+    }
+
+    private void invertirDirecciones() {
+        if (inversorActivado) {
+            direcciones = new char[]{'N', 'W', 'S', 'E'};
+            movimiento = new int[][]{{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
+        } else {
+            direcciones = new char[]{'S', 'E', 'N', 'W'};
+            movimiento = new int[][]{{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+        }
+    }
+
+    private void moverDireccionAlFrente(int index) {
+        // Reordena dirección y movimiento al frente con el índice de la dirección elegida
+        char selectedDir = direcciones[index];
+        int[] selectedMove = movimiento[index];
+
+        for (int i = index; i > 0; i--) {
+            direcciones[i] = direcciones[i - 1];
+            movimiento[i] = movimiento[i - 1];
+        }
+
+        direcciones[0] = selectedDir;
+        movimiento[0] = selectedMove;
     }
 
     public void teleport() {
         int[][] teleports = encontrarTeleport();
-
-        // Si no hay puntos de teletransporte, muestra un mensaje y sale
         if (teleports.length == 0) {
             System.out.println("No hay puntos de teletransporte disponibles.");
             return;
         }
 
-        // Encuentra el TP más cercano
         int[] tpMasCercano = null;
         double distanciaMinima = Double.MAX_VALUE;
         int currentX = robot.getX();
@@ -111,8 +143,6 @@ class Bender {
                 distanciaMinima = distancia;
             }
         }
-
-        // Si encontramos un teletransporte válido
         if (tpMasCercano != null) {
             robot.mover(tpMasCercano[0], tpMasCercano[1]);
             System.out.println("Teletransportado a: (" + tpMasCercano[0] + ", " + tpMasCercano[1] + ")");
@@ -125,7 +155,6 @@ class Bender {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }
 
-
     private int[][] encontrarTeleport() {
         int count = 0;
         for (int i = 0; i < mapaVisual.length; i++) {
@@ -135,10 +164,8 @@ class Bender {
                 }
             }
         }
-
         int[][] teleports = new int[count][2];
         int index = 0;
-
         for (int i = 0; i < mapaVisual.length; i++) {
             for (int j = 0; j < mapaVisual[i].length; j++) {
                 if (mapaVisual[i][j] == 'T') {
@@ -148,7 +175,6 @@ class Bender {
                 }
             }
         }
-
         return teleports;
     }
 
