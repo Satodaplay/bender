@@ -66,15 +66,12 @@ class Bender {
     private String movimientoRobot() {
         StringBuilder camino = new StringBuilder();
         Set<String> visitado = new HashSet<>();
-
         while (true) {
             boolean moved = false;
-            String estadoActual = robot.getX() + "," + robot.getY() + "," + direcciones[0];
-
+            String estadoActual = robot.getX() + "," + robot.getY() + "," + String.valueOf(inversorActivado) + direcciones[0];
             if (visitado.contains(estadoActual)) {
-                return null;
+                return null;  // Bucle detectado
             }
-
             visitado.add(estadoActual);
 
             for (int i = 0; i < 4; i++) {
@@ -103,12 +100,16 @@ class Bender {
                     break;
                 }
             }
+
             if (!moved) {
                 break;
             }
         }
         return camino.toString();
     }
+
+// Es necesario añadir String.valueOf(inversorActivado) para incluir el estado del inversor en la cadena de visitado,
+// lo que evita bucles no detectados.
 
     private void invertirDirecciones() {
         if (inversorActivado) {
