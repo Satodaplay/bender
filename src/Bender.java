@@ -7,7 +7,6 @@ class Bender {
     private RobotBender robot;
     private boolean inversorActivado = false;
 
-    // Inicialmente, asumir el orden S, E, N, W
     private char[] direcciones = {'S', 'E', 'N', 'W'};
     private int[][] movimiento = {
             {1, 0},  // S
@@ -25,13 +24,27 @@ class Bender {
     public char[][] convertirMapa(String mapa) {
         String[] filas = mapa.split("\n");
         int filasNum = filas.length;
-        int columnasNum = filas[0].length();
-        char[][] mapaArray = new char[filasNum][columnasNum];
+        int columnasMax = 0;
+
+        // Encontrar la longitud de la fila más larga
+        for (String fila : filas) {
+            if (fila.length() > columnasMax) {
+                columnasMax = fila.length();
+            }
+        }
+
+        // Crear el mapa visual con espacios como relleno
+        char[][] mapaArray = new char[filasNum][columnasMax];
         for (int i = 0; i < filasNum; i++) {
             for (int j = 0; j < filas[i].length(); j++) {
                 mapaArray[i][j] = filas[i].charAt(j);
             }
+            // Relleno de espacios para filas más cortas
+            for (int j = filas[i].length(); j < columnasMax; j++) {
+                mapaArray[i][j] = ' ';
+            }
         }
+
         return mapaArray;
     }
 
@@ -52,12 +65,10 @@ class Bender {
 
     private String movimientoRobot() {
         StringBuilder camino = new StringBuilder();
-        Set<String> visitado = new HashSet<>(); // Para guardar las posiciones visitadas con dirección
+        Set<String> visitado = new HashSet<>();
 
         while (true) {
             boolean moved = false;
-
-            // Chequear si el estado actual con la dirección inicial (orden prioridad) ya fue visitado
             String estadoActual = robot.getX() + "," + robot.getY() + "," + direcciones[0];
 
             if (visitado.contains(estadoActual)) {
@@ -75,7 +86,7 @@ class Bender {
                     camino.append(direcciones[i]);
 
                     if (mapaVisual[nuevoX][nuevoY] == '$') {
-                        return camino.toString(); // Si llegó a la meta, termina
+                        return camino.toString();
                     }
 
                     if (mapaVisual[nuevoX][nuevoY] == 'T') {
@@ -87,14 +98,13 @@ class Bender {
                         invertirDirecciones();
                     }
 
-                    // Cambia el orden de las direcciones, poniendo esta dirección al frente
                     moverDireccionAlFrente(i);
                     moved = true;
                     break;
                 }
             }
             if (!moved) {
-                break; // Si ninguna dirección es válida, termina el bucle
+                break;
             }
         }
         return camino.toString();
@@ -111,7 +121,6 @@ class Bender {
     }
 
     private void moverDireccionAlFrente(int index) {
-        // Reordena dirección y movimiento al frente con el índice de la dirección elegida
         char selectedDir = direcciones[index];
         int[] selectedMove = movimiento[index];
 
@@ -136,13 +145,28 @@ class Bender {
         int currentX = robot.getX();
         int currentY = robot.getY();
 
+        // Direcciones en "orden de reloj" cuando las distancias son iguales: NE, SE, SW, NW
+        int[][] relojPrioridad = {{-1, 1}, {1, 1}, {1, -1}, {-1, -1}};
+
         for (int[] tp : teleports) {
             double distancia = calcularDistancia(currentX, currentY, tp[0], tp[1]);
-            if (!Arrays.equals(tp, new int[]{currentX, currentY}) && distancia < distanciaMinima) {
-                tpMasCercano = tp;
-                distanciaMinima = distancia;
+            if (!Arrays.equals(tp, new int[]{currentX, currentY})) {
+                if (distancia < distanciaMinima) {
+                    tpMasCercano = tp;
+                    distanciaMinima = distancia;
+                } else if (distancia == distanciaMinima) {
+                    for (int[] prioridad : relojPrioridad) {
+                        int prioridadX = currentX + prioridad[0];
+                        int prioridadY = currentY + prioridad[1];
+                        if (tp[0] == prioridadX && tp[1] == prioridadY) {
+                            tpMasCercano = tp;
+                            break;
+                        }
+                    }
+                }
             }
         }
+
         if (tpMasCercano != null) {
             robot.mover(tpMasCercano[0], tpMasCercano[1]);
             System.out.println("Teletransportado a: (" + tpMasCercano[0] + ", " + tpMasCercano[1] + ")");
